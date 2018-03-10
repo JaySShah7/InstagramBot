@@ -3,6 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+
+
+AuthenticationInfo.py
+InstagramBot.log
+InstagramBot.log.1
+
+
+
 # C extensions
 *.so
 
