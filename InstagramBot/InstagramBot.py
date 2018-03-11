@@ -18,6 +18,10 @@ logger.addHandler(handler)
 
 
 def SavePosts(posts):
+    try:
+        os.unlink('Posts.py')
+    except:
+        pass
     file=open('Posts.py', 'w', encoding='utf-8')
     file.write('Posts= '+pprint.pformat(posts)+'\n')
     file.close()
@@ -76,7 +80,7 @@ def GetPosts(reddit, max_images=10): #creates image folder, saves images, return
     counter=0
     Posts=[]
     subreddit=reddit.subreddit('reddevils')
-    for submission in subreddit.top('day', limit=50):
+    for submission in subreddit.top('day', limit=60):
         #if direct image link
         if IsImageLink(submission.url) and counter<max_images:
             img=requests.get(submission.url)
@@ -119,7 +123,7 @@ def GetPosts(reddit, max_images=10): #creates image folder, saves images, return
 
 
 
-def CreateDatabase():
+def CreateDatabase(number_posts=10):
     reddit=RedditLogIn()
     #delete pre existing images
     
@@ -132,7 +136,7 @@ def CreateDatabase():
         except:
             pass
         
-    posts=GetPosts(reddit,10)
+    posts=GetPosts(reddit,number_posts)
     SavePosts(posts)
 
     
@@ -145,46 +149,51 @@ def CreateDatabase():
 
 
 
-
-def InstagramBot():
+def InstagramBot(starting_time=11, number_of_posts=12):
     instagram = InstagramAPI(instagramusername, instagrampassword)
     while True:
-        if(instagram.login()):
+        if(instagram.isLoggedIn):
             logger.info("Logged in to Instagram.")
             try:
-                CreateDatabase()
+                CreateDatabase(number_of_posts)
+                starting_time=11   #time to start posts each day 
+
+                counter=len(Posts.Posts)
+                for i in range(0, counter):
+                    try:
+                        
+                        instagram.uploadPhoto(Posts.Posts[i]['File'], Posts.Posts[i]['Title'])
+                        logger.info('post uploaded!')
+                        time.sleep(3600)
+                    except Exception as e:
+                        logger.error('couldnt upload photo.')
+                        logger.error(e)
+                        pass
+                    
+                current_time=datetime.datetime.now().hour
+                wait_time= starting_time-current_time
+                if wait_time <0:
+                    wait_time=24+wait_time
+                time.sleep(wait_time*60*60)      
+            
             except Exception as e:
-                logger.info('couldnt create Database')
-                logger.info(e)
-                time.sleep(600)
+                logger.error(e)
+                time.sleep(900)
+                
                 continue
 
             
-            starting_time=11   #time to start posts each day
-            current_time=datetime.datetime.now().hour
-            wait_time= starting_time-current_time
-            if wait_time <0:
-                wait_time=24+wait_time
-            time.sleep(wait_time*60*60)         
-
-            counter=len(Posts.Posts)
-            for i in range(0, counter):
-                try:
-                    #todo: aspect ratio crop
-                    instagram.uploadPhoto(Posts.Posts[i]['File'], Posts.Posts[i]['Title'])
-                    logger.info('post uploaded!')
-                    time.sleep(3600)
-                except:
-                    logger.error('couldnt upload photo.')
-                    pass
+           
                                  
         else:
-            logger.error("Couldnt log in to Instagram.")
-            time.sleep(900) #try again in 15 min
+            
+            logger.warning("Not logged in.")
+            try:
+                instagram.login()
+            except:
+                logger.error("Cant log in.")
+                time.sleep(900)
 
 
 
-
-
-
-InstagramBot()
+InstagramBot(11, 12)
