@@ -1,12 +1,8 @@
-import praw,re,requests,pprint,importlib,os, time, datetime, urllib.request
+import praw,re,requests,pprint,importlib,os, time, datetime, urllib.request,string
 from bs4 import BeautifulSoup
 from PIL import Image
 from InstagramAPI import InstagramAPI
 from AuthenticationInfo import *
-try:
-    import Posts
-except:
-    pass
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -15,6 +11,18 @@ handler=RotatingFileHandler('InstagramBot.log', maxBytes=100000, backupCount=1)
 logger.setLevel(logging.INFO)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(handler)
+
+try:
+    import Posts
+except:
+    pass
+    logger.info("Couldn't initially import Posts.")
+
+try:
+    from Hashtags import Hashtags
+except:
+    Hashtags=[]
+
 
 
 def SavePosts(posts):
@@ -37,6 +45,62 @@ def IsImageLink(url):  #checks if url is image, returns image type (png,jpg, jpe
         return False
 
 
+def AddHashtags(text, hashtaglist):
+    txt=text
+    for punct in string.punctuation:
+        txt=txt.replace(punct, "")
+    txt=txt.lower()
+
+    for i in range(len(hashtaglist)):
+        found=False
+        for n in range(len(hashtaglist[i]['Keywords'])):
+            if hashtaglist[i]['Keywords'][n].lower() in txt:
+                found=True
+        if found==True:
+            text+=" #"+hashtaglist[i]['Hashtag']
+
+    text+=" #MUFC"
+
+    return text
+            
+                           
+                           
+        
+
+def MakeCaptions(posts):
+    def capital(string):
+        string=string[0].upper()+string[1:]
+        return string
+    
+    for i in range(len(posts)):
+    
+        text=posts[i]['Title']
+        
+        if text.lower().startswith('i '):
+            text='I' + text[1:]
+        text= text.replace(' I ', ' a fan')    
+        text==text.replace('. a fan ', '. A fan ')
+        text==text.replace('! a fan ', '! A fan ')
+        
+        sentences=text.split('. ')
+        sentences=[capital(sentence) for sentence in sentences]
+        text='. '.join(sentences)
+        
+
+        sentences=text.split('! ')
+        sentences=[capital(sentence) for sentence in sentences]
+        text='! '.join(sentences)
+
+        
+        sentences=text.split('? ')
+        sentences=[capital(sentence) for sentence in sentences]
+        text='? '.join(sentences)
+                
+        text=AddHashtags(text, Hashtags)
+        
+        posts[i]['Title']=text
+        
+    return posts
 
 
 def CropToInstagram(filename):
@@ -64,6 +128,20 @@ def CropToInstagram(filename):
         #img.show()
         logger.info('Vertical Image Cropped')
 
+    if filename[-3:]=='png':
+        try:
+            img=Image.open(filename)
+            new_name=filename[:-3]+'jpg'
+            img=img.convert('RGB')
+            img.save(new_name)
+            os.unlink(filename)
+            filename=new_name
+        except Exception as e:
+            logger.info(e)
+        
+    return filename
+      
+
         
 
 
@@ -78,47 +156,55 @@ def RedditLogIn():
 
 def GetPosts(reddit, max_images=10): #creates image folder, saves images, returns dictionary Posts
     counter=0
+    minimum_post_score=75
     Posts=[]
     subreddit=reddit.subreddit('reddevils')
     for submission in subreddit.top('day', limit=60):
         #if direct image link
-        if IsImageLink(submission.url) and counter<max_images:
-            img=requests.get(submission.url)
-            filename=str(counter)+'.'+IsImageLink(submission.url)
-            filename=os.path.join('images', filename)
-            imagefile=open(filename, 'wb')
-            imagefile.write(img.content)
-            imagefile.close()
-            logger.info('Image saved: '+filename)
-            logger.info(submission.title)
-            CropToInstagram(filename)
-            Posts.append({'File':filename, 'Title':submission.title}) #dictionary format
-            logger.info('Database appended.')
-            counter+=1
+        if submission.score > minimum_post_score:
+            if IsImageLink(submission.url) and counter<max_images:
+                try:
+                    img=requests.get(submission.url)
+                    filename=str(counter)+'.'+IsImageLink(submission.url)
+                    filename=os.path.join('images', filename)
+                    imagefile=open(filename, 'wb')
+                    imagefile.write(img.content)
+                    imagefile.close()
+                    logger.info('Image saved: '+filename)
+                    logger.info(submission.title)
+                    filename=CropToInstagram(filename)
+                    Posts.append({'File':filename, 'Title':submission.title}) #dictionary format
+                    logger.info('Database appended.')
+                    counter+=1
+                except Exception as e:
+                    logger.error(e)
 
-        #if imgur link
-        elif str(submission.url).lower().startswith('https://imgur.com') or str(submission.url).lower().startswith('http://imgur.com') and counter<max_images:
-            
-            html_page = urllib.request.urlopen(submission.url)
-            soup = BeautifulSoup(html_page, 'lxml') 
-            images = []
-            for img in soup.findAll('img'):
-                images.append('https:'+img.get('src'))
+            #if imgur link
+            elif str(submission.url).lower().startswith('https://imgur.com') or str(submission.url).lower().startswith('http://imgur.com') and counter<max_images:
+                try:
+                    html_page = urllib.request.urlopen(submission.url)
+                    soup = BeautifulSoup(html_page, 'lxml') 
+                    images = []
+                    for img in soup.findAll('img'):
+                        images.append('https:'+img.get('src'))
 
-            img=requests.get(images[0])
-            filename=str(counter)+'.'+images[0][-3:]
-            filename=os.path.join('images', filename)
-            imagefile=open(filename, 'wb')
-            imagefile.write(img.content)
-            imagefile.close()
-            logger.info('Image saved: '+filename)
-            CropToInstagram(filename)
-            logger.info(submission.title)
+                    img=requests.get(images[0])
+                    filename=str(counter)+'.'+images[0][-3:]
+                    filename=os.path.join('images', filename)
+                    imagefile=open(filename, 'wb')
+                    imagefile.write(img.content)
+                    imagefile.close()
+                    logger.info('Image saved: '+filename)
+                    filename=CropToInstagram(filename)
+                    logger.info(submission.title)
 
-            Posts.append({'File':filename, 'Title':submission.title}) #dictionary format
-            logger.info('Database appended.')
-            counter+=1
+                    Posts.append({'File':filename, 'Title':submission.title}) #dictionary format
+                    logger.info('Database appended.')
+                    counter+=1
+                except Exception as e:
+                    logger.error(e)
 
+    Posts=MakeCaptions(Posts)
     return Posts
 
 
@@ -141,11 +227,6 @@ def CreateDatabase(number_posts=10):
 
     
     logger.info("Datebase created.")
-    try:
-        importlib.reload(Posts)
-    except:
-        import Posts
-    logger.info("Datebase reloaded.")
 
 
 
@@ -156,6 +237,14 @@ def InstagramBot(starting_time=11, number_of_posts=12):
             logger.info("Logged in to Instagram.")
             try:
                 CreateDatabase(number_of_posts)
+
+                try:
+                    importlib.reload(Posts)
+                    logger.info("Datebase reloaded.")
+                except:
+                    import Posts
+                    logger.info("Couldnt reload posts. Datebase imported first time.")
+                
                 starting_time=11   #time to start posts each day 
 
                 counter=len(Posts.Posts)
@@ -174,6 +263,7 @@ def InstagramBot(starting_time=11, number_of_posts=12):
                 wait_time= starting_time-current_time
                 if wait_time <0:
                     wait_time=24+wait_time
+                logger.info('Sleeping {} hours.'.format(str(wait_time)))
                 time.sleep(wait_time*60*60)      
             
             except Exception as e:
@@ -195,5 +285,5 @@ def InstagramBot(starting_time=11, number_of_posts=12):
                 time.sleep(900)
 
 
-
+#CreateDatabase(12)
 InstagramBot(11, 12)
