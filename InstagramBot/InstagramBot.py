@@ -30,9 +30,11 @@ def SavePosts(posts):
         os.unlink('Posts.py')
     except:
         pass
+        os.info('Can not delete previous Posts.py file')
     file=open('Posts.py', 'w', encoding='utf-8')
     file.write('Posts= '+pprint.pformat(posts)+'\n')
     file.close()
+    
 
 
     
