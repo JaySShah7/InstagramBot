@@ -114,7 +114,7 @@ def CropToInstagram(filename):
 
         img=img.crop((left_x, 0, right_x, y))
         #img.show()
-        img.save(filename)
+        
         logger.info('Horizontal Image Cropped')
 
     elif x/y<4/5: #vertical
@@ -124,21 +124,22 @@ def CropToInstagram(filename):
         bottom_y=  top_y+new_y
         
         img=img.crop((0, top_y, x, bottom_y))
-        img.save(filename)
+        
         #img.show()
         logger.info('Vertical Image Cropped')
 
-    if filename[-3:]=='png':
-        try:
-            img=Image.open(filename)
-            new_name=filename[:-3]+'jpg'
-            img=img.convert('RGB')
-            img.save(new_name)
-            os.unlink(filename)
-            filename=new_name
-        except Exception as e:
-            logger.info(e)
+    #if filename[-3:]=='png':
+    try:
         
+        new_name=filename[:-3]+'jpg'
+        img=img.convert('RGB')
+        os.unlink(filename)
+        img.save(new_name)
+        filename=new_name
+    except Exception as e:
+        logger.error(e)
+
+    
     return filename
       
 
