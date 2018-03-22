@@ -1,8 +1,11 @@
-import praw,re,requests,pprint,importlib,os, time, datetime, urllib.request,string
+import praw,re,requests,pprint,importlib,os, time, datetime, urllib.request,string, sys
 from bs4 import BeautifulSoup
 from PIL import Image
 from InstagramAPI import InstagramAPI
 from AuthenticationInfo import *
+
+#change current working directory
+os.chdir(os.path.dirname(sys.argv[0]))
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -11,18 +14,16 @@ handler=RotatingFileHandler('InstagramBot.log', maxBytes=100000, backupCount=1)
 logger.setLevel(logging.INFO)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(handler)
-
-try:
-    import Posts
-except:
-    pass
-    logger.info("Couldn't initially import Posts.")
+logger.info("Program started.")
 
 try:
     from Hashtags import Hashtags
 except:
     Hashtags=[]
 
+#initial wait time when starting program. Else, bot starts posting during scheduled time
+if len(sys.argv)==2:
+    WaitTime=int(sys.argv[1])
 
 
 def SavePosts(posts):
@@ -77,9 +78,10 @@ def MakeCaptions(posts):
     for i in range(len(posts)):
     
         text=posts[i]['Title']
-        
+
+        text= text.replace('I  have', 'A fan has')
         if text.lower().startswith('i '):
-            text='I' + text[1:]
+            text='A fan' + text[1:]
         text= text.replace(' I ', ' a fan')    
         text==text.replace('. a fan ', '. A fan ')
         text==text.replace('! a fan ', '! A fan ')
@@ -234,7 +236,21 @@ def CreateDatabase(number_posts=10):
 
 
 def InstagramBot(starting_time=11, number_of_posts=12):
+    #time to start posts each day
     instagram = InstagramAPI(instagramusername, instagrampassword)
+    instagram.login()
+    if len(sys.argv)==2:
+        logger.info("Instagram bot sleeping "+str(WaitTime)+" hours.")
+        time.sleep(WaitTime*3600)
+
+    else:
+        current_time=datetime.datetime.now().hour
+        wait_time= starting_time-current_time
+        if wait_time <0:
+            wait_time=24+wait_time
+        logger.info('Sleeping {} hours.'.format(str(wait_time)))
+        time.sleep(wait_time*3600)      
+        
     while True:
         if(instagram.isLoggedIn):
             logger.info("Logged in to Instagram.")
@@ -248,7 +264,7 @@ def InstagramBot(starting_time=11, number_of_posts=12):
                     import Posts
                     logger.info("Couldnt reload posts. Datebase imported first time.")
                 
-                starting_time=11   #time to start posts each day 
+                 
 
                 counter=len(Posts.Posts)
                 for i in range(0, counter):
