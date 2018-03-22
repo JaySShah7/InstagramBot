@@ -5,7 +5,7 @@ from InstagramAPI import InstagramAPI
 from AuthenticationInfo import *
 
 #change current working directory
-os.chdir(os.path.dirname(sys.argv[0]))
+os.chdir(sys.path[0])
 
 import logging
 from logging.handlers import RotatingFileHandler
