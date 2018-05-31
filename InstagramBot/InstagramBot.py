@@ -79,12 +79,6 @@ def MakeCaptions(posts):
     
         text=posts[i]['Title']
 
-        text= text.replace('I  have', 'A fan has')
-        if text.lower().startswith('i '):
-            text='A fan' + text[1:]
-        text= text.replace(' I ', ' a fan')    
-        text==text.replace('. a fan ', '. A fan ')
-        text==text.replace('! a fan ', '! A fan ')
         
         sentences=text.split('. ')
         sentences=[capital(sentence) for sentence in sentences]
@@ -161,7 +155,7 @@ def RedditLogIn():
 
 def GetPosts(reddit, max_images=10): #creates image folder, saves images, returns dictionary Posts
     counter=0
-    minimum_post_score=75
+    minimum_post_score=90  # MINIMUM POST SCORE
     Posts=[]
     subreddit=reddit.subreddit('reddevils')
     for submission in subreddit.top('day', limit=60):

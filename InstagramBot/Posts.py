@@ -1,6 +1,4 @@
-Posts= [{'File': 'images\\0.jpg', 'Title': 'Dave. #MUFC'},
+Posts= [{'File': 'images\\0.jpg', 'Title': 'Jose the "bully" #Mourinho #MUFC'},
  {'File': 'images\\1.jpg',
-  'Title': 'If there’s one player who truly appreciates the badge, it’s '
-           'Lukaku. #Lukaku #MUFC'},
- {'File': 'images\\2.jpg',
-  'Title': "Old Trafford in today's snow #OldTrafford #MUFC"}]
+  'Title': "Former Southampton coach Jason Dodd about Luke Shaw's situation. "
+           '#Shaw #MUFC'}]
